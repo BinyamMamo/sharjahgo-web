@@ -110,7 +110,27 @@ body {
 			<div id="status-notice"></div>
 		</div>
 
-		<script src="index.js"></script>
+		<script>
+// Added by tools/pack_web.py: index.wasm and index.pck are shipped gzipped as *.bin.
+(() => {
+	const realFetch = window.fetch.bind(window);
+	window.fetch = async (input, init) => {
+		const url = typeof input === 'string' ? input : input.url;
+		const packed = /\.(wasm|pck)$/.exec(url.split('?')[0]);
+		if (!packed) {
+			return realFetch(input, init);
+		}
+		const response = await realFetch(url + '.bin', init);
+		if (!response.ok) {
+			return response;
+		}
+		const type = packed[1] === 'wasm' ? 'application/wasm' : 'application/octet-stream';
+		const body = response.body.pipeThrough(new DecompressionStream('gzip'));
+		return new Response(body, { status: 200, headers: { 'Content-Type': type } });
+	};
+})();
+</script>
+<script src="index.js"></script>
 		<script>
 const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":15504304,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
 const GODOT_THREADS_ENABLED = false;
